@@ -53,7 +53,7 @@ def send_welcome(message):
     reply = '<b>Привет! Я — электронный помощник для поиска группы</b>\n\n'
     reply += '👑<b>Если вы ищете еще людей:</b>\n\n'
     reply += 'вводите команду <u>/lfg</u>, вот ее формат: \n\n'
-    reply += '<code>/lfg [мероприятие] +N [дата] [время мск]</code>\n\n'
+    reply += '<code>/lfg [мероприятие] +N [дата] [время UTC+3]</code>\n\n'
     reply += 'Например:\n\n'
     reply += '<code>/lfg вог мастер +5 25.08.2021 17:00</code>\n\n'
     reply += '<code>Вместо даты вы можете</code> использовать слова ‘завтра’, ‘сегодня’ или ‘сейчас’\n\n'
@@ -203,19 +203,39 @@ def lfg(message):
         slots = 12
 
     if slots < 1:
-        bot.reply_to(message, 'Страж, я тебя не понял.\nФормат команды: /lfg [мероприятие] +N [дата] [время]')
+        bot.reply_to(message, 'Не понял сколько участников.\nФормат команды: /lfg [мероприятие] +N [дата] [время]')
         return
 
     # достаем дату
+
+    text_month = re.search(r'(\d{1,2})\s([а-я]+)', text.lower())
+
+    if text_month:
+        day = text_month.group(1)
+        month = text_month.group(2)
+
+    # Convert month name to month number
+    months_dict = {'января': 1, 'февраля': 2, 'марта': 3, 'апреля': 4, 'мая': 5, 'июня': 6, 
+    'июля': 7, 'августа': 8, 'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12}
+
     date_query = re.search(reg_date, text)
     now = False
 
     if date_query:
         date = datetime.datetime.strptime(date_query.group(0), '%d.%m.%Y')
-    elif 'послезавтра' in text:
+    elif 'послезавтра' in text.lower():
         date = datetime.datetime.today() + datetime.timedelta(days=2)
-    elif 'завтра' in text:
+    elif 'завтра' in text.lower():
         date = datetime.datetime.today() + datetime.timedelta(days=1)
+    elif text_month and day and month:
+
+        month_number = months_dict.get(month)
+        # Get the current year
+        current_year = datetime.datetime.now().year
+        print('HANDLED: {day}.{month}.{year}')
+
+        # Construct the date object
+        date = datetime.datetime(current_year, month_number, int(day))
     else:
         tzinfo = datetime.timezone(datetime.timedelta(hours=+3))
         date = datetime.datetime.now(tzinfo)
@@ -231,7 +251,7 @@ def lfg(message):
         date = date.replace(hour=hour, minute=minute)
 
     if not now and not time_query:
-        bot.reply_to(message, 'Страж, я тебя не понял.\nФормат команды: /lfg [мероприятие] +N [дата] [время]')
+        bot.reply_to(message, 'Не понял вермя мероприятия, точно его указал? Формат: 12:00')
         return
 
     # discord
@@ -239,7 +259,7 @@ def lfg(message):
 
     reply = f'<b>Мероприятие:</b> {name}\n'
     reply += f'<b>Мест:</b> {slots}\n'
-    reply += f'<b>Когда:</b> 🔥Прямо сейчас!🔥\n' if now else f'<b>Когда:</b> {date.strftime("%d.%m.%Y, %H:%M")} МСК\n'
+    reply += f'<b>Когда:</b> 🔥Прямо сейчас!🔥\n' if now else f'<b>Когда:</b> {date.strftime("%d.%m.%Y, %H:%M")} UTC+3\n'
     reply += f'<b>Лидер:</b> @{leader}\n'
     disc = ""
     if disc_query:
