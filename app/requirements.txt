@@ -1,0 +1,3 @@
+pyTelegramBotAPI
+airtable-python-wrapper
+requests

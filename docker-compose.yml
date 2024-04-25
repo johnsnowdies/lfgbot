@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  vegabot:
+    container_name: lfgbot
+    build:
+      context: .
+    restart: on-failure
+    environment:
+      - ATB_TOKEN
+      - TG_API_KEY
+      - TG_CHAT_ID
