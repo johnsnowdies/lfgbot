@@ -17,8 +17,8 @@ def get_join_keyboard():
 def send_direct(chat, message):
     try:
         bot.send_message(chat, message)
-    except:
-        pass
+    except Exception as e:
+        print(e)
 
 
 @bot.message_handler(commands=['mute'])
@@ -36,7 +36,7 @@ def mute_user(message):
     if not user:
         return
 
-    mute = user.get("fields").get("mute", None)
+    mute = user.get("mute", None)
 
     if mute:
         ur.toggle_mute(telegram_tag, False)
@@ -95,44 +95,43 @@ def prove_callback(call):
     if not event:
         return
 
-    event_id = event.get('id')
-    event_data = event.get('fields')
-    disc = event_data.get("disc", None)
+    event_id = event.get('_id')
+    disc = event.get("disc", None)
 
-    leader_user = ur.get_user(tg=event_data.get("tg"))
-    mute = leader_user.get("fields").get("mute", None)
+    leader_user = ur.get_user(tg=event.get("tg"))
+    mute = leader_user.get("mute", None)
 
-    date = datetime.datetime.strptime(event_data.get("date"), '%Y-%m-%dT%H:%M:%S.%fZ')
+    #date = datetime.datetime.strptime(event.get("date"), '%Y-%m-%dT, %H:%M')
 
     participants = pr.get_event_participants(tg_post_id=call.message.message_id)
-    slots = int(event_data.get("slots"))
+    slots = int(event.get("slots"))
 
     deleted = False
 
     reply_list = ''
 
-    if event_data.get("tg") == telegram_tag:
+    if event.get("tg") == telegram_tag:
         if not mute:
             send_direct(call.from_user.id, 'Ты слился, мероприяте было удалено')
 
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-        er.delete(record=event_id)
+        er.delete(event_id)
         return
 
     participants_list = list()
 
     if participants:
         for p in participants:
-            user = p.get('fields').get('tg')
+            user = p.get('tg')
 
             if user == telegram_tag:
-                record = p.get('id')
-                pr.del_participant(record=record)
+                record = p.get('_id')
+                pr.del_participant(record)
                 deleted = True
 
                 if leader_user and not mute:
-                    leader_msg = f'С вашего мероприятия <code>{event_data.get("name")}</code> слился @{telegram_tag}'
-                    send_direct(leader_user.get("fields").get("tg_chat_id"), leader_msg)
+                    leader_msg = f'С вашего мероприятия <code>{event.get("name")}</code> слился @{telegram_tag}'
+                    send_direct(leader_user.get("tg_chat_id"), leader_msg)
             else:
                 participants_list.append(user)
                 reply_list += f'@{user}\n'
@@ -145,13 +144,13 @@ def prove_callback(call):
         free_space -= 1
 
         if leader_user and not mute:
-            leader_msg = f'На ваше мероприятие <code>{event_data.get("name")}</code> записался @{telegram_tag}'
-            send_direct(leader_user.get("fields").get("tg_chat_id"), leader_msg)
+            leader_msg = f'На ваше мероприятие <code>{event.get("name")}</code> записался @{telegram_tag}'
+            send_direct(leader_user.get("tg_chat_id"), leader_msg)
 
-    reply = f'<b>Мероприятие:</b> {event_data.get("name")}\n'
+    reply = f'<b>Мероприятие:</b> {event.get("name")}\n'
     reply += f'<b>Мест:</b> {free_space}\n'
-    reply += f'<b>Когда:</b> {date.strftime("%d.%m.%Y, %H:%M")} МСК\n'
-    reply += f'<b>Лидер:</b> @{event_data.get("tg")}\n'
+    reply += f'<b>Когда:</b> {event.get("date")} UTC+3\n'
+    reply += f'<b>Лидер:</b> @{event.get("tg")}\n'
     if disc:
         reply += f'<b>Discord:</b> <a href="https://{disc}">{disc}</a>\n'
 

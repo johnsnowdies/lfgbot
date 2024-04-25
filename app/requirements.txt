@@ -1,3 +1,2 @@
 pyTelegramBotAPI
-airtable-python-wrapper
-requests
+pymongo

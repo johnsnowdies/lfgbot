@@ -1,68 +1,62 @@
-import airtable
-from settings import atb_token
+from pymongo import MongoClient
+
+client = MongoClient('mongo')
+db = client['lfg']
 
 
 class EventRepository:
-    airtable = airtable.Airtable('lfg', 'events', atb_token)
-
     def add_event(self, name, slots, date, tg_post_id, tg, disc):
-        self.airtable.insert({'tg_post_id': int(tg_post_id),
-                              'slots': int(slots),
-                              'date': date.strftime("%Y-%m-%d, %H:%M"),
-                              'name': name,
-                              'tg': tg,
-                              'disc': disc})
+        events_collection = db['events']
+        events_collection.insert_one({
+            'tg_post_id': int(tg_post_id),
+            'slots': int(slots),
+            'date': date.strftime("%Y-%m-%d, %H:%M"),
+            'name': name,
+            'tg': tg,
+            'disc': disc
+        })
 
-    def delete(self, record):
-        self.airtable.delete(record_id=record)
+    def delete(self, event_id):
+        events_collection = db['events']
+        events_collection.delete_one({'_id': event_id})
 
     def get_event(self, tg_post_id: str) -> dict:
-        data = self.airtable.search('tg_post_id', tg_post_id)
-        if data:
-            return data[0]
+        events_collection = db['events']
+        return events_collection.find_one({'tg_post_id': tg_post_id})
 
 
 class ParticipantRepository:
-    airtable = airtable.Airtable('lfg', 'participants', atb_token)
-
     def add_participant(self, event_id, tg, tg_post_id):
-        self.airtable.insert({
-            'event_id': [event_id],
+        participants_collection = db['participants']
+        participants_collection.insert_one({
+            'event_id': event_id,
             'tg': tg,
             'tg_post_id': tg_post_id
         })
 
-    def del_participant(self, record):
-        self.airtable.delete(record_id=record)
-
-    # def del_participant_by_id(self, tg_post_id):
-    #    self.airtable.delete_by_field('tg_post_id', tg_post_id)
+    def del_participant(self, participant_id):
+        participants_collection = db['participants']
+        participants_collection.delete_one({'_id': participant_id})
 
     def get_event_participants(self, tg_post_id: str) -> dict:
-        data = self.airtable.search('tg_post_id', tg_post_id)
-        if data:
-            return data
+        participants_collection = db['participants']
+        return list(participants_collection.find({'tg_post_id': tg_post_id}))
 
 
 class UserRepository:
-    airtable = airtable.Airtable('lfg', 'users', atb_token)
-
     def add_user(self, tg, tg_chat_id):
-        self.airtable.insert({
+        users_collection = db['users']
+        users_collection.insert_one({
             'tg': tg,
             'tg_chat_id': tg_chat_id,
         })
 
     def get_user(self, tg: str) -> dict:
-        try:
-            data = self.airtable.search('tg', tg)
-        except:
-            return None
-        if data:
-            return data[0]
+        users_collection = db['users']
+        return users_collection.find_one({'tg': tg})
 
     def toggle_mute(self, tg, mute):
+        users_collection = db['users']
         user = self.get_user(tg)
-        self.airtable.update(record_id=user.get("id"), fields={
-            'mute': mute
-        })
+        if user:
+            users_collection.update_one({'_id': user['_id']}, {'$set': {'mute': mute}})

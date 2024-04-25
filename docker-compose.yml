@@ -7,6 +7,12 @@ services:
       context: .
     restart: on-failure
     environment:
-      - ATB_TOKEN
       - TG_API_KEY
       - TG_CHAT_ID
+    volumes:
+      - ./app:/app
+    links:
+      - mongo
+  mongo:
+    image: mongo:4.0.4
+    restart: always
